@@ -19,7 +19,7 @@ const AllEntries = () => {
                     return;
                 }
 
-                const url = 'http://localhost:5000/getExpenses';
+                const url = 'https://money-matrix-frontend.vercel.app/getExpenses';
                 const res = await fetch(url, {
                     method: 'GET',
                     headers: {

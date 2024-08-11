@@ -19,7 +19,7 @@ const Home = () => {
       return;
     }
 
-    const url = 'http://localhost:5000/getExpenseTypeMonthWise';
+    const url = 'https://money-matrix-frontend.vercel.app/getExpenseTypeMonthWise';
 
     try {
       const res = await fetch(url, {

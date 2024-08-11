@@ -23,7 +23,7 @@ const Signup = () => {
     event.preventDefault();
     console.log('Signup Data:', signupFormData);
 
-    const url = 'http://localhost:5000/storeUser';
+    const url = 'https://money-matrix-frontend.vercel.app/storeUser';
     try {
       const res = await fetch(url, {
         method: 'POST',

@@ -21,7 +21,7 @@ const Hero = () => {
         event.preventDefault();
     
         console.log("Form data:", formData);
-        const url = 'http://localhost:5000/storeExpenses';
+        const url = 'https://money-matrix-frontend.vercel.app/storeExpenses';
     
         try {
             const user_id = localStorage.getItem("user_id");
