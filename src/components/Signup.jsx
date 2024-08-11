@@ -8,7 +8,7 @@ const Signup = () => {
     password: ''
   });
 
-  const navigate=useNavigate();
+  const navigate = useNavigate();
 
   const handleChanges = (event) => {
     const { name, value } = event.target;
@@ -23,7 +23,7 @@ const Signup = () => {
     event.preventDefault();
     console.log('Signup Data:', signupFormData);
 
-    const url = 'https://money-matrix-frontend.vercel.app/storeUser';
+    const url = 'https://money-matrix-backend.vercel.app/storeUser';
     try {
       const res = await fetch(url, {
         method: 'POST',

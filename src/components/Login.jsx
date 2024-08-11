@@ -31,7 +31,7 @@
       console.log(formData);
       
 
-      const url = 'https://money-matrix-frontend.vercel.app/checkUser';
+      const url = 'https://money-matrix-backend.vercel.app/checkUser';
 
       try{
           const res=await fetch(url,{

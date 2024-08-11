@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 const Hero = () => {
     const [count, setCount] = useState(1);
-    const [formData, setFormData] = useState([{ name: '', amount: '' ,expense_type:''}]);
+    const [formData, setFormData] = useState([{ name: '', amount: '', expense_type: '' }]);
     const [date, setDate] = useState('');
 
     const handleDateChange = (event) => {
@@ -19,10 +19,10 @@ const Hero = () => {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-    
+
         console.log("Form data:", formData);
-        const url = 'https://money-matrix-frontend.vercel.app/storeExpenses';
-    
+        const url = 'https://money-matrix-backend.vercel.app/storeExpenses';
+
         try {
             const user_id = localStorage.getItem("user_id");
             if (!user_id) {
@@ -30,7 +30,7 @@ const Hero = () => {
                 return;
             }
 
-            
+
             const res = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -43,7 +43,7 @@ const Hero = () => {
             console.log(data);
 
             setCount(1);
-            setFormData([{ name: '', amount: '',expense_type:'' }]);
+            setFormData([{ name: '', amount: '', expense_type: '' }]);
             setDate('');
 
 
@@ -51,10 +51,10 @@ const Hero = () => {
             console.log('Error in storing data:', error);
         }
     };
-    
+
     const addNewExpense = () => {
         setCount(count + 1);
-        setFormData([...formData, { name: '', amount: '',expense_type:'' }]);
+        setFormData([...formData, { name: '', amount: '', expense_type: '' }]);
     };
 
     return (
@@ -103,8 +103,8 @@ const Hero = () => {
                             <br />
                             <label> Enter Expense Type:</label>
                             <select name='expense_type' value={formData[index].expense_type} onChange={(e) => {
-                                    handleInputChange(index, e);
-                                }} required >
+                                handleInputChange(index, e);
+                            }} required >
                                 <option value="" disabled>Select type</option>
                                 <option value="Food">Food</option>
                                 <option value="Travel">Travel</option>
@@ -120,9 +120,9 @@ const Hero = () => {
                         <br />
                     </div>
                 ))}
-                <br/>
+                <br />
                 <div className='rounded-[50%] px-3 py-2 bg-gray-400 cursor-pointer' onClick={addNewExpense}><FontAwesomeIcon icon={faPlus} /></div>
-                <br/>
+                <br />
                 <button className='m-auto block bg-blue-700 text-white p-2 rounded-md' type='submit'> Add Expense </button>
             </form>
         </div>
