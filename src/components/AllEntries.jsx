@@ -22,7 +22,7 @@ const AllEntries = () => {
                     return;
                 }
 
-                const url = `https://money-matrix-backend.vercel.app/getExpensesPagination?page=${currentPage}&pageSize=4`;
+                const url = `http://localhost:5000/getExpensesPagination?page=${currentPage}&pageSize=4`;
                 const res = await axios.get(url, {
                     headers: {
                         'Content-Type': 'application/json',
@@ -31,9 +31,10 @@ const AllEntries = () => {
                 });
 
                 if (res.status === 200) {
-                    const { expenses, totalPages } = res.data;
-                    setExpenses(expenses);
-                    setFilteredExpenses(expenses);
+                    const { entries, totalPages } = res.data;
+
+                    setExpenses(entries);
+                    setFilteredExpenses(entries);
                     setTotalPages(totalPages);
                 } else {
                     console.error('Error fetching expenses');
@@ -48,20 +49,20 @@ const AllEntries = () => {
 
     useEffect(() => {
         const totalAmount = filteredExpenses.reduce((sum, expense) => {
-            return sum + expense.entry.reduce((entrySum, entri) => entrySum + entri.amount, 0);
+            return sum + (expense.amount || 0);
         }, 0);
         setTotal(totalAmount);
     }, [filteredExpenses]);
 
     useEffect(() => {
         if (textSearch.length === 10) {
-            const filtered = expenses.filter(expense => expense.date.slice(0, 10) === textSearch);
+            const filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 10) === textSearch);
             setFilteredExpenses(filtered);
         } else if (textSearch.length === 7) {
-            const filtered = expenses.filter(expense => expense.date.slice(0, 7) === textSearch);
+            const filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 7) === textSearch);
             setFilteredExpenses(filtered);
         } else if (textSearch.length === 4) {
-            const filtered = expenses.filter(expense => expense.date.slice(0, 4) === textSearch);
+            const filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 4) === textSearch);
             setFilteredExpenses(filtered);
         } else {
             setFilteredExpenses(expenses);
@@ -91,13 +92,11 @@ const AllEntries = () => {
         const dailySummary = {};
 
         filteredExpenses.forEach(expense => {
-            const day = expense.date.slice(0, 10); // YYYY-MM-DD
+            const day = expense.date ? expense.date.slice(0, 10) : ''; // YYYY-MM-DD
             if (!dailySummary[day]) {
                 dailySummary[day] = 0;
             }
-            expense.entry.forEach(entri=>{
-                dailySummary[day] += entri.amount;
-            })
+            dailySummary[day] += expense.amount || 0;
         });
 
         return renderSummaryTable(dailySummary, 'Date');
@@ -107,15 +106,11 @@ const AllEntries = () => {
         const monthlySummary = {};
 
         filteredExpenses.forEach(expense => {
-            const month = expense.date.slice(0, 7); // YYYY-MM
+            const month = expense.date ? expense.date.slice(0, 7) : ''; // YYYY-MM
             if (!monthlySummary[month]) {
                 monthlySummary[month] = 0;
             }
-
-            expense.entry.forEach(entri=>{
-                monthlySummary[month] += entri.amount;
-            })
-           
+            monthlySummary[month] += expense.amount || 0;
         });
 
         return renderSummaryTable(monthlySummary, 'Month');
@@ -133,14 +128,12 @@ const AllEntries = () => {
             </thead>
             <tbody className='bg-white'>
                 {expenses.map((expense, index) => (
-                    expense.entry.map((entri, ind) => (
-                        <tr key={ind}>
-                            <td className='text-xl text-center shadow-md p-2'>{entri.name}</td>
-                            <td className='text-xl text-center shadow-md p-2'>{entri.amount}</td>
-                            <td className='text-xl text-center shadow-md p-2'>{entri.expense_type}</td>
-                            <td className='text-xl text-center shadow-md p-2'>{expense.date.slice(0, 10).split("-").reverse().join("/")}</td>
-                        </tr>
-                    ))
+                    <tr key={index}>
+                        <td className='text-xl text-center shadow-md p-2'>{expense.entry_name}</td>
+                        <td className='text-xl text-center shadow-md p-2'>{expense.entry_amount}</td>
+                        <td className='text-xl text-center shadow-md p-2'>{expense.entry_type}</td>
+                        <td className='text-xl text-center shadow-md p-2'>{expense.date ? expense.date.slice(0, 10).split("-").reverse().join("/") : 'N/A'}</td>
+                    </tr>
                 ))}
             </tbody>
         </table>
