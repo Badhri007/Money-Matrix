@@ -21,7 +21,7 @@ const AllEntries = () => {
                     return;
                 }
 
-                const url = `https://money-matrix-frontend.vercel/getExpensesPagination?page=${currentPage}&pageSize=4`;
+                const url = `https://money-matrix-frontend.vercel.app/getExpensesPagination?page=${currentPage}&pageSize=4`;
                 const res = await fetch(url, {
                     headers: {
                         'Content-Type': 'application/json',
@@ -32,7 +32,7 @@ const AllEntries = () => {
                 if (res.ok) {
                     const data = await res.json();
                     const { entries, totalPages } = data;
-
+                    console.log(entries);
                     setExpenses(entries);
                     setFilteredExpenses(entries);
                     setTotalPages(totalPages);
