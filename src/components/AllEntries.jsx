@@ -22,7 +22,7 @@ const AllEntries = () => {
                     return;
                 }
 
-                const url = `https://money-matrix-backend.vercel.app/getExpensesPagination?page=${currentPage}&pageSize=4`;
+                const url = `https://money-matrix-frontend.vercel/getExpensesPagination?page=${currentPage}&pageSize=4`;
                 const res = await axios.get(url, {
                     headers: {
                         'Content-Type': 'application/json',
