@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Search from './Search';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 const AllEntries = () => {
     const [expenses, setExpenses] = useState([]);
@@ -23,15 +22,16 @@ const AllEntries = () => {
                 }
 
                 const url = `https://money-matrix-frontend.vercel/getExpensesPagination?page=${currentPage}&pageSize=4`;
-                const res = await axios.get(url, {
+                const res = await fetch(url, {
                     headers: {
                         'Content-Type': 'application/json',
                         'user_id': user_id
                     }
                 });
 
-                if (res.status === 200) {
-                    const { entries, totalPages } = res.data;
+                if (res.ok) {
+                    const data = await res.json();
+                    const { entries, totalPages } = data;
 
                     setExpenses(entries);
                     setFilteredExpenses(entries);
@@ -49,7 +49,7 @@ const AllEntries = () => {
 
     useEffect(() => {
         const totalAmount = filteredExpenses.reduce((sum, expense) => {
-            return sum + (expense.amount || 0);
+            return sum + (expense.entry_amount || 0);
         }, 0);
         setTotal(totalAmount);
     }, [filteredExpenses]);
@@ -96,7 +96,7 @@ const AllEntries = () => {
             if (!dailySummary[day]) {
                 dailySummary[day] = 0;
             }
-            dailySummary[day] += expense.amount || 0;
+            dailySummary[day] += expense.entry_amount || 0;
         });
 
         return renderSummaryTable(dailySummary, 'Date');
@@ -110,7 +110,7 @@ const AllEntries = () => {
             if (!monthlySummary[month]) {
                 monthlySummary[month] = 0;
             }
-            monthlySummary[month] += expense.amount || 0;
+            monthlySummary[month] += expense.entry_amount || 0;
         });
 
         return renderSummaryTable(monthlySummary, 'Month');
