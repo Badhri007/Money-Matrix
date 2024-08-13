@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import Search from './Search';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const AllEntries = () => {
     const [expenses, setExpenses] = useState([]);
     const [filteredExpenses, setFilteredExpenses] = useState([]);
     const [total, setTotal] = useState(0);
     const [textSearch, setTextSearch] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(0);
 
     const navigate = useNavigate();
 
@@ -19,20 +22,19 @@ const AllEntries = () => {
                     return;
                 }
 
-                const url = 'https://money-matrix-backend.vercel.app/getExpenses';
-                const res = await fetch(url, {
-                    method: 'GET',
+                const url = `https://money-matrix-backend.vercel.app/getExpensesPagination?page=${currentPage}&pageSize=10`;
+                const res = await axios.get(url, {
                     headers: {
                         'Content-Type': 'application/json',
                         'user_id': user_id
                     }
                 });
 
-                if (res.ok) {
-                    const data = await res.json();
-                    console.log("Got data:", data);
-                    setExpenses(data);
-                    setFilteredExpenses(data);
+                if (res.status === 200) {
+                    const { expenses, totalPages } = res.data;
+                    setExpenses(expenses);
+                    setFilteredExpenses(expenses);
+                    setTotalPages(totalPages);
                 } else {
                     console.error('Error fetching expenses');
                 }
@@ -42,7 +44,7 @@ const AllEntries = () => {
         };
 
         fetchExpenses();
-    }, []);
+    }, [currentPage]);
 
     useEffect(() => {
         const totalAmount = filteredExpenses.reduce((sum, expense) => {
@@ -50,7 +52,6 @@ const AllEntries = () => {
         }, 0);
         setTotal(totalAmount);
     }, [filteredExpenses]);
-    
 
     useEffect(() => {
         if (textSearch.length === 10) {
@@ -149,6 +150,18 @@ const AllEntries = () => {
         navigate('/entry');
     };
 
+    const handlePrevPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
+    };
+
     return (
         <div className="p-10 bg-gray-100">
             <Search textSearch={textSearch} setTextSearch={setTextSearch} />
@@ -166,7 +179,12 @@ const AllEntries = () => {
                     renderExpensesTable(filteredExpenses)
                 )}
                 <br />
-                <button onClick={move} className='p-3 block bg-red-300 rounded-3xl font-semibold'>Add Expense</button>
+                <div className="flex justify-between w-1/2">
+                    <button onClick={handlePrevPage} disabled={currentPage === 1} className='p-3 bg-blue-300 rounded-3xl font-semibold'>Previous Page</button>
+                    <button onClick={handleNextPage} disabled={currentPage === totalPages} className='p-3 bg-blue-300 rounded-3xl font-semibold'>Next Page</button>
+                </div>
+                <br />
+                <button onClick={move} className='p-3 bg-red-300 rounded-3xl font-semibold'>Add Expense</button>
             </div>
         </div>
     );
