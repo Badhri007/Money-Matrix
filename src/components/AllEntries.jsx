@@ -23,6 +23,7 @@ const AllEntries = () => {
                 }
 
                 const url = `https://money-matrix-backend.vercel.app/getExpensesPagination?page=${currentPage}&pageSize=4`;
+
                 const res = await fetch(url, {
                     headers: {
                         'Content-Type': 'application/json',
@@ -31,13 +32,13 @@ const AllEntries = () => {
                 });
 
                 if (res.status === 200) {
-                    const { entries, totalPages } = res.data;
+                    const { entries, totalPages } = await res.json();
 
                     setExpenses(entries);
                     setFilteredExpenses(entries);
                     setTotalPages(totalPages);
                 } else {
-                    console.error('Error fetching expenses');
+                    console.error('Error fetching expenses:', res.statusText);
                 }
             } catch (error) {
                 console.error('Error fetching expenses:', error);
@@ -49,7 +50,7 @@ const AllEntries = () => {
 
     useEffect(() => {
         const totalAmount = filteredExpenses.reduce((sum, expense) => {
-            return sum + (expense.amount || 0);
+            return sum + (expense.entry_amount || 0);
         }, 0);
         setTotal(totalAmount);
     }, [filteredExpenses]);
@@ -96,7 +97,7 @@ const AllEntries = () => {
             if (!dailySummary[day]) {
                 dailySummary[day] = 0;
             }
-            dailySummary[day] += expense.amount || 0;
+            dailySummary[day] += expense.entry_amount || 0;
         });
 
         return renderSummaryTable(dailySummary, 'Date');
@@ -110,7 +111,7 @@ const AllEntries = () => {
             if (!monthlySummary[month]) {
                 monthlySummary[month] = 0;
             }
-            monthlySummary[month] += expense.amount || 0;
+            monthlySummary[month] += expense.entry_amount || 0;
         });
 
         return renderSummaryTable(monthlySummary, 'Month');
