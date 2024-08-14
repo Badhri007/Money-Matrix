@@ -33,7 +33,7 @@ const AllEntries = () => {
 
                 if (res.status === 200) {
                     const { entries, totalPages } = await res.json();
-
+                    console.log(entries);
                     setExpenses(entries);
                     setFilteredExpenses(entries);
                     setTotalPages(totalPages);
