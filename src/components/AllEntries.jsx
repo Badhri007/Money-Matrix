@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import Search from './Search';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import editIcon from "../assets/penciledit.png";
+import deleteIcon from "../assets/delete_icon.png";
+import Search from './Search';
+import Pagination from './Pagination';
 
 const AllEntries = () => {
     const [expenses, setExpenses] = useState([]);
@@ -10,8 +12,13 @@ const AllEntries = () => {
     const [textSearch, setTextSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
+    const [editingRow, setEditingRow] = useState(null);
+    const [editedValues, setEditedValues] = useState({ entry_name: '', entry_amount: '', entry_type: '', date: '' });
 
     const navigate = useNavigate();
+
+    const expensesPerPage=5;
+    
 
     useEffect(() => {
         const fetchExpenses = async () => {
@@ -22,23 +29,25 @@ const AllEntries = () => {
                     return;
                 }
 
-                const url = `https://money-matrix-backend.vercel.app/getExpensesPagination?page=${currentPage}&pageSize=4`;
+    
+                const url = `https://money-matrix-backend.vercel.app/getExpenses`;
 
-                const res = await fetch(url, {
+                const response = await fetch(url, {
                     headers: {
                         'Content-Type': 'application/json',
                         'user_id': user_id
                     }
                 });
 
-                if (res.status === 200) {
-                    const { entries, totalPages } = await res.json();
-                    console.log(entries);
-                    setExpenses(entries);
-                    setFilteredExpenses(entries);
-                    setTotalPages(totalPages);
-                } else {
-                    console.error('Error fetching expenses:', res.statusText);
+                if (response.status === 200 && textSearch.length===0) {
+                    const data = await response.json();
+                    console.log("Data Got:",data);
+                    setExpenses(data);
+                    setFilteredExpenses(data);
+                } 
+                
+                else {
+                    console.error('Error fetching expenses:', response.statusText);
                 }
             } catch (error) {
                 console.error('Error fetching expenses:', error);
@@ -46,29 +55,82 @@ const AllEntries = () => {
         };
 
         fetchExpenses();
-    }, [currentPage]);
+    }, [textSearch]);
+
+    const handleEditClick = (index) => {
+        const expense = expenses[index];
+        setEditingRow(index);
+        setEditedValues({
+            entry_name: expense.entry_name,
+            entry_amount: expense.entry_amount,
+            entry_type: expense.entry_type,
+            date: expense.date
+        });
+    };
+
+    const handleEditSave = async (index) => {
+        const expenseToUpdate = { ...expenses[index], ...editedValues };
+
+        try {
+            const response = await fetch('http://localhost:5000/editExpense', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(expenseToUpdate)
+            });
+
+            if (response.status === 200) {
+                const res_data = await response.json();
+                let data = res_data["data"];
+
+                const updatedExpenses = expenses.map((expense, i) =>
+                    i === index ? data : expense
+                );
+
+                setExpenses(updatedExpenses);
+                setFilteredExpenses(updatedExpenses);
+                setEditingRow(null);
+            } else {
+                console.error('Error updating expense:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error updating expense:', error);
+        }
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setEditedValues(prevValues => ({
+            ...prevValues,
+            [name]: value
+        }));
+    };
 
     useEffect(() => {
-        const totalAmount = filteredExpenses.reduce((sum, expense) => {
-            return sum + (expense.entry_amount || 0);
-        }, 0);
+        const totalAmount = filteredExpenses.reduce((sum, expense) => sum + (expense.entry_amount || 0), 0);
         setTotal(totalAmount);
     }, [filteredExpenses]);
 
     useEffect(() => {
-        if (textSearch.length === 10) {
-            const filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 10) === textSearch);
-            setFilteredExpenses(filtered);
-        } else if (textSearch.length === 7) {
-            const filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 7) === textSearch);
-            setFilteredExpenses(filtered);
-        } else if (textSearch.length === 4) {
-            const filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 4) === textSearch);
-            setFilteredExpenses(filtered);
-        } else {
-            setFilteredExpenses(expenses);
-        }
-    }, [textSearch, expenses]);
+        const filterExpenses = () => {
+            let filtered = [];
+            if (textSearch.length === 10) {
+                filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 10) === textSearch);
+            } else if (textSearch.length === 7) {
+                filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 7) === textSearch);
+            } else if (textSearch.length === 4) {
+                filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 4) === textSearch);
+            } else {
+                filtered = expenses;
+            }
+            
+            return filtered;
+        };
+
+        setFilteredExpenses(filterExpenses());
+        setTotalPages(Math.ceil(filteredExpenses.length / expensesPerPage));
+    }, [textSearch, expenses, currentPage]);
 
     const renderSummaryTable = (summary, label) => (
         <table className='table-auto w-1/2 rounded-2xl shadow-xl overflow-hidden'>
@@ -90,97 +152,154 @@ const AllEntries = () => {
     );
 
     const renderMonthlySummary = () => {
-        const dailySummary = {};
-
-        filteredExpenses.forEach(expense => {
+        const dailySummary = filteredExpenses.reduce((acc, expense) => {
             const day = expense.date ? expense.date.slice(0, 10) : ''; // YYYY-MM-DD
-            if (!dailySummary[day]) {
-                dailySummary[day] = 0;
-            }
-            dailySummary[day] += expense.entry_amount || 0;
-        });
+            acc[day] = (acc[day] || 0) + (expense.entry_amount || 0);
+            return acc;
+        }, {});
 
         return renderSummaryTable(dailySummary, 'Date');
     };
 
     const renderYearlySummary = () => {
-        const monthlySummary = {};
-
-        filteredExpenses.forEach(expense => {
+        const monthlySummary = filteredExpenses.reduce((acc, expense) => {
             const month = expense.date ? expense.date.slice(0, 7) : ''; // YYYY-MM
-            if (!monthlySummary[month]) {
-                monthlySummary[month] = 0;
-            }
-            monthlySummary[month] += expense.entry_amount || 0;
-        });
+            acc[month] = (acc[month] || 0) + (expense.entry_amount || 0);
+            return acc;
+        }, {});
 
         return renderSummaryTable(monthlySummary, 'Month');
     };
 
-    const renderExpensesTable = (expenses) => (
-        <table className='table-auto w-1/2 rounded-2xl shadow-xl overflow-hidden'>
-            <thead className='bg-gray-200'>
-                <tr className='divide-x divide-white'>
-                    <th className='p-2'>Expense Name</th>
-                    <th className='p-2'>Amount Spent</th>
-                    <th className='p-2'>Expense Type</th>
-                    <th className='p-2'>Spent On</th>
-                </tr>
-            </thead>
-            <tbody className='bg-white'>
-                {expenses.map((expense, index) => (
-                    <tr key={index}>
-                        <td className='text-xl text-center shadow-md p-2'>{expense.entry_name}</td>
-                        <td className='text-xl text-center shadow-md p-2'>{expense.entry_amount}</td>
-                        <td className='text-xl text-center shadow-md p-2'>{expense.entry_type}</td>
-                        <td className='text-xl text-center shadow-md p-2'>{expense.date ? expense.date.slice(0, 10).split("-").reverse().join("/") : 'N/A'}</td>
+    const renderExpensesTable = (expenses) => {
+        const paginatedExpenses=expenses.slice((currentPage - 1) * expensesPerPage, currentPage * expensesPerPage);
+        return (
+            <table className='table-auto w-1/2 rounded-2xl shadow-xl overflow-hidden'>
+                <thead className='bg-gray-200'>
+                    <tr className='divide-x divide-white'>
+                        <th className='p-2'>Expense Name</th>
+                        <th className='p-2'>Amount Spent</th>
+                        <th className='p-2'>Expense Type</th>
+                        <th className='p-2'>Spent On</th>
+                        <th className='p-2'>Edit</th>
+                        <th className='p-2'>Delete</th>
                     </tr>
-                ))}
-            </tbody>
-        </table>
-    );
-
-    const move = () => {
-        navigate('/entry');
+                </thead>
+                <tbody className='bg-white'>
+                    {paginatedExpenses.map((expense, index) => (
+                        <tr key={index}>
+                            <td className='text-xl text-center shadow-md p-2'>
+                                {editingRow === index ? (
+                                    <input
+                                        type="text"
+                                        name="entry_name"
+                                        value={editedValues.entry_name}
+                                        onChange={handleChange}
+                                    />
+                                ) : (
+                                    expense.entry_name
+                                )}
+                            </td>
+                            <td className='text-xl text-center shadow-md p-2'>
+                                {editingRow === index ? (
+                                    <input
+                                        type="number"
+                                        name="entry_amount"
+                                        value={editedValues.entry_amount}
+                                        onChange={handleChange}
+                                    />
+                                ) : (
+                                    expense.entry_amount
+                                )}
+                            </td>
+                            <td className='text-xl text-center shadow-md p-2'>
+                                {editingRow === index ? (
+                                    <select name="entry_type" value={editedValues.entry_type} onChange={handleChange}>
+                                        <option value="" disabled>Select type</option>
+                                        <option value="Food">Food</option>
+                                        <option value="Travel">Travel</option>
+                                        <option value="Clothing">Clothing</option>
+                                        <option value="Electronics">Electronics</option>
+                                        <option value="Education">Education</option>
+                                        <option value="Medical">Medical</option>
+                                        <option value="Cosmetics">Cosmetics</option>
+                                        <option value="Entertainment">Entertainment</option>
+                                        <option value="Others">Others</option>
+                                    </select>
+                                ) : (
+                                    expense.entry_type
+                                )}
+                            </td>
+                            <td className='text-xl text-center shadow-md p-2'>
+                                {editingRow === index ? (
+                                    <input
+                                        type="text"
+                                        name="date"
+                                        value={editedValues.date}
+                                        onChange={handleChange}
+                                    />
+                                ) : (
+                                    expense.date ? expense.date.slice(0, 10).split("-").reverse().join("/") : 'N/A'
+                                )}
+                            </td>
+                            <td className='text-xl text-center shadow-md p-2'>
+                                {editingRow === index ? (
+                                    <button className='text-white bg-blue-500 rounded-full p-1' onClick={() => handleEditSave(index)}>Save</button>
+                                ) : (
+                                    <img src={editIcon} alt="edit" className='h-6 w-6 cursor-pointer' onClick={() => handleEditClick(index)} />
+                                )}
+                            </td>
+                            <td className='text-xl text-center shadow-md p-2'>
+                                <img src={deleteIcon} alt="delete" className='h-6 w-6 cursor-pointer' />
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        );
     };
 
-    const handlePrevPage = () => {
-        if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-        }
-    };
 
-    const handleNextPage = () => {
-        if (currentPage < totalPages) {
-            setCurrentPage(currentPage + 1);
-        }
+    const move=()=>{
+        navigate("/entry");
+    }
+
+    const handlePageChange = (pageNumber) => {
+        setCurrentPage(pageNumber);
     };
+    
+
+
 
     return (
         <div className="p-10 bg-gray-100">
-            <Search textSearch={textSearch} setTextSearch={setTextSearch} />
+        <Search textSearch={textSearch} setTextSearch={setTextSearch} />
+        <br />
+        <div className="flex items-center flex-col">
+            <h1 className='text-2xl'>Total Expenditure: ${total}</h1>
             <br />
-            <div className="flex items-center flex-col">
-                <h1 className='text-2xl'>Total Expenditure: ${total}</h1>
-                <br />
-                {textSearch.length === 10 ? (
-                    renderExpensesTable(filteredExpenses)
-                ) : textSearch.length === 7 ? (
-                    renderMonthlySummary()
-                ) : textSearch.length === 4 ? (
-                    renderYearlySummary()
-                ) : (
-                    renderExpensesTable(filteredExpenses)
-                )}
-                <br />
-                <div className="flex justify-between w-1/2">
-                    <button onClick={handlePrevPage} disabled={currentPage === 1} className='p-3 bg-blue-300 rounded-3xl font-semibold'>Previous Page</button>
-                    <button onClick={handleNextPage} disabled={currentPage === totalPages} className='p-3 bg-blue-300 rounded-3xl font-semibold'>Next Page</button>
-                </div>
-                <br />
-                <button onClick={move} className='p-3 bg-red-300 rounded-3xl font-semibold'>Add Expense</button>
-            </div>
+            {textSearch.length === 10 ? (
+                renderExpensesTable(filteredExpenses)
+                
+            ) : textSearch.length === 7 ? (
+                renderMonthlySummary()
+            ) : textSearch.length === 4 ? (
+                renderYearlySummary()
+            ) : (
+                renderExpensesTable(filteredExpenses)
+            )}
+            <br/>
+
+            <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    handlePageChange={handlePageChange}
+            />
+
+
+            <button onClick={move} className='p-3 bg-red-300 rounded-3xl font-semibold'>Add Expense</button>
         </div>
+    </div>
     );
 };
 
