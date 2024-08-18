@@ -16,10 +16,8 @@ const AllEntries = () => {
     const [editedValues, setEditedValues] = useState({ entry_name: '', entry_amount: '', entry_type: '', date: '' });
 
     const navigate = useNavigate();
-
-    const expensesPerPage=5;
+    const expensesPerPage = 5;
     
-
     useEffect(() => {
         const fetchExpenses = async () => {
             try {
@@ -28,32 +26,29 @@ const AllEntries = () => {
                     console.error('User ID not found in localStorage');
                     return;
                 }
-
     
                 const url = `https://money-matrix-backend.vercel.app/getExpenses`;
-
+    
                 const response = await fetch(url, {
                     headers: {
                         'Content-Type': 'application/json',
                         'user_id': user_id
                     }
                 });
-
-                if (response.status === 200 && textSearch.length===0) {
+    
+                if (response.ok) {
                     const data = await response.json();
-                    console.log("Data Got:",data);
                     setExpenses(data);
                     setFilteredExpenses(data);
-                } 
-                
-                else {
-                    console.error('Error fetching expenses:', response.statusText);
+    
+                } else {
+                    console.error('Error fetching expenses:', response.status, response.statusText);
                 }
             } catch (error) {
                 console.error('Error fetching expenses:', error);
             }
         };
-
+    
         fetchExpenses();
     }, [textSearch]);
 
@@ -72,7 +67,7 @@ const AllEntries = () => {
         const expenseToUpdate = { ...expenses[index], ...editedValues };
 
         try {
-            const response = await fetch('http://localhost:5000/editExpense', {
+            const response = await fetch('https://money-matrix-backend.vercel.app/editExpense', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -82,10 +77,8 @@ const AllEntries = () => {
 
             if (response.status === 200) {
                 const res_data = await response.json();
-                let data = res_data["data"];
-
                 const updatedExpenses = expenses.map((expense, i) =>
-                    i === index ? data : expense
+                    i === index ? res_data.data : expense
                 );
 
                 setExpenses(updatedExpenses);
@@ -114,23 +107,59 @@ const AllEntries = () => {
 
     useEffect(() => {
         const filterExpenses = () => {
-            let filtered = [];
             if (textSearch.length === 10) {
-                filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 10) === textSearch);
+                return expenses.filter(expense => expense.date && expense.date.slice(0, 10) === textSearch);
             } else if (textSearch.length === 7) {
-                filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 7) === textSearch);
+                return expenses.filter(expense => expense.date && expense.date.slice(0, 7) === textSearch);
             } else if (textSearch.length === 4) {
-                filtered = expenses.filter(expense => expense.date && expense.date.slice(0, 4) === textSearch);
+                return expenses.filter(expense => expense.date && expense.date.slice(0, 4) === textSearch);
             } else {
-                filtered = expenses;
+                return expenses;
             }
-            
-            return filtered;
         };
-
-        setFilteredExpenses(filterExpenses());
-        setTotalPages(Math.ceil(filteredExpenses.length / expensesPerPage));
+    
+        const filtered = filterExpenses();
+        setFilteredExpenses(filtered);
+        const totalPages = Math.ceil(filtered.length / expensesPerPage);
+        setTotalPages(totalPages);
+    
+        if (textSearch.length === 10) 
+        {
+            const totalPages = Math.ceil(filtered.length / expensesPerPage);
+            setTotalPages(totalPages);
+        } 
+        else if (textSearch.length === 7) 
+        {
+            const dailySummary = filtered.reduce((acc, expense) => {
+                acc[expense.date.slice(0,10)] = (acc[expense.date.slice(0,10)] || 0) + 1;
+                return acc;
+            }, {});
+            const dailyCount = Object.keys(dailySummary).length;
+            setTotalPages(Math.ceil(dailyCount / expensesPerPage));
+        } 
+        else if (textSearch.length === 4)
+        {
+            const monthlySummary = filtered.reduce((acc, expense) => {
+                acc[expense.date.slice(0,7)] = (acc[expense.date.slice(0,7)] || 0) + 1;
+                return acc;
+            }, {});
+            const monthlyCount = Object.keys(monthlySummary).length;
+            setTotalPages(Math.ceil(monthlyCount / expensesPerPage));
+        } 
+        else 
+        {
+            const totalPages = Math.ceil(filtered.length / expensesPerPage);
+            setTotalPages(totalPages);
+        }
+    
     }, [textSearch, expenses, currentPage]);
+
+    const getPaginatedSummary = (summary) => {
+        const startIndex = (currentPage - 1) * expensesPerPage;
+        const endIndex = startIndex + expensesPerPage;
+
+        return Object.entries(summary).slice(startIndex, endIndex);
+    };
 
     const renderSummaryTable = (summary, label) => (
         <table className='table-auto w-1/2 rounded-2xl shadow-xl overflow-hidden'>
@@ -141,10 +170,10 @@ const AllEntries = () => {
                 </tr>
             </thead>
             <tbody className='bg-white'>
-                {Object.keys(summary).map((key, index) => (
+                {getPaginatedSummary(summary).map(([key, value], index) => (
                     <tr onClick={() => setTextSearch(key)} className='hover:bg-green-300' key={index}>
                         <td className='text-xl text-center shadow-md p-2 underline'>{key}</td>
-                        <td className='text-xl text-center shadow-md p-2'>{summary[key]}</td>
+                        <td className='text-xl text-center shadow-md p-2'>{value}</td>
                     </tr>
                 ))}
             </tbody>
@@ -172,7 +201,8 @@ const AllEntries = () => {
     };
 
     const renderExpensesTable = (expenses) => {
-        const paginatedExpenses=expenses.slice((currentPage - 1) * expensesPerPage, currentPage * expensesPerPage);
+        const paginatedExpenses = filteredExpenses.slice((currentPage - 1) * expensesPerPage, currentPage * expensesPerPage);
+
         return (
             <table className='table-auto w-1/2 rounded-2xl shadow-xl overflow-hidden'>
                 <thead className='bg-gray-200'>
@@ -259,47 +289,40 @@ const AllEntries = () => {
         );
     };
 
-
-    const move=()=>{
+    const move = () => {
         navigate("/entry");
     }
 
     const handlePageChange = (pageNumber) => {
         setCurrentPage(pageNumber);
     };
-    
-
-
 
     return (
         <div className="p-10 bg-gray-100">
-        <Search textSearch={textSearch} setTextSearch={setTextSearch} />
-        <br />
-        <div className="flex items-center flex-col">
-            <h1 className='text-2xl'>Total Expenditure: ${total}</h1>
+            <Search textSearch={textSearch} setTextSearch={setTextSearch} />
             <br />
-            {textSearch.length === 10 ? (
-                renderExpensesTable(filteredExpenses)
-                
-            ) : textSearch.length === 7 ? (
-                renderMonthlySummary()
-            ) : textSearch.length === 4 ? (
-                renderYearlySummary()
-            ) : (
-                renderExpensesTable(filteredExpenses)
-            )}
-            <br/>
-
-            <Pagination
+            <div className="flex items-center flex-col">
+                <h1 className='text-2xl'>Total Expenditure: ${total}</h1>
+                <br />
+                {textSearch.length === 10 ? (
+                    renderExpensesTable(filteredExpenses)
+                ) : textSearch.length === 7 ? (
+                    renderMonthlySummary()
+                ) : textSearch.length === 4 ? (
+                    renderYearlySummary()
+                ) : (
+                    renderExpensesTable(filteredExpenses)
+                )}
+                <br/>
+                <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
                     handlePageChange={handlePageChange}
-            />
-
-
-            <button onClick={move} className='p-3 bg-red-300 rounded-3xl font-semibold'>Add Expense</button>
+                />
+                <br/>
+                <button onClick={move} className='p-3 bg-red-300 rounded-3xl font-semibold'>Add Expense</button>
+            </div>
         </div>
-    </div>
     );
 };
 
