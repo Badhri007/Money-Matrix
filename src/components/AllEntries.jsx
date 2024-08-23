@@ -17,7 +17,7 @@ const AllEntries = () => {
 
     const navigate = useNavigate();
     const expensesPerPage = 5;
-    
+
     useEffect(() => {
         const fetchExpenses = async () => {
             try {
@@ -26,21 +26,21 @@ const AllEntries = () => {
                     console.error('User ID not found in localStorage');
                     return;
                 }
-    
+
                 const url = `https://money-matrix-backend.vercel.app/getExpenses`;
-    
+
                 const response = await fetch(url, {
                     headers: {
                         'Content-Type': 'application/json',
                         'user_id': user_id
                     }
                 });
-    
+
                 if (response.ok) {
                     const data = await response.json();
                     setExpenses(data);
                     setFilteredExpenses(data);
-    
+
                 } else {
                     console.error('Error fetching expenses:', response.status, response.statusText);
                 }
@@ -48,13 +48,19 @@ const AllEntries = () => {
                 console.error('Error fetching expenses:', error);
             }
         };
-    
+
         fetchExpenses();
     }, [textSearch]);
 
     const handleEditClick = (index) => {
-        const expense = expenses[index];
-        setEditingRow(index);
+
+        
+        let calculatedIndex=(currentPage-1)*expensesPerPage + index;
+
+        const expense = expenses[calculatedIndex];
+        console.log("Edit exp:",expense);
+        
+        setEditingRow(calculatedIndex);
         setEditedValues({
             entry_name: expense.entry_name,
             entry_amount: expense.entry_amount,
@@ -64,7 +70,8 @@ const AllEntries = () => {
     };
 
     const handleEditSave = async (index) => {
-        const expenseToUpdate = { ...expenses[index], ...editedValues };
+        let calculatedIndex=(currentPage-1)*expensesPerPage + index;
+        const expenseToUpdate = { ...expenses[calculatedIndex], ...editedValues };
 
         try {
             const response = await fetch('https://money-matrix-backend.vercel.app/editExpense', {
@@ -78,7 +85,7 @@ const AllEntries = () => {
             if (response.status === 200) {
                 const res_data = await response.json();
                 const updatedExpenses = expenses.map((expense, i) =>
-                    i === index ? res_data.data : expense
+                    i === calculatedIndex ? res_data.data : expense
                 );
 
                 setExpenses(updatedExpenses);
@@ -117,41 +124,37 @@ const AllEntries = () => {
                 return expenses;
             }
         };
-    
+
         const filtered = filterExpenses();
         setFilteredExpenses(filtered);
         const totalPages = Math.ceil(filtered.length / expensesPerPage);
         setTotalPages(totalPages);
-    
-        if (textSearch.length === 10) 
-        {
+
+        if (textSearch.length === 10) {
             const totalPages = Math.ceil(filtered.length / expensesPerPage);
             setTotalPages(totalPages);
-        } 
-        else if (textSearch.length === 7) 
-        {
+        }
+        else if (textSearch.length === 7) {
             const dailySummary = filtered.reduce((acc, expense) => {
-                acc[expense.date.slice(0,10)] = (acc[expense.date.slice(0,10)] || 0) + 1;
+                acc[expense.date.slice(0, 10)] = (acc[expense.date.slice(0, 10)] || 0) + 1;
                 return acc;
             }, {});
             const dailyCount = Object.keys(dailySummary).length;
             setTotalPages(Math.ceil(dailyCount / expensesPerPage));
-        } 
-        else if (textSearch.length === 4)
-        {
+        }
+        else if (textSearch.length === 4) {
             const monthlySummary = filtered.reduce((acc, expense) => {
-                acc[expense.date.slice(0,7)] = (acc[expense.date.slice(0,7)] || 0) + 1;
+                acc[expense.date.slice(0, 7)] = (acc[expense.date.slice(0, 7)] || 0) + 1;
                 return acc;
             }, {});
             const monthlyCount = Object.keys(monthlySummary).length;
             setTotalPages(Math.ceil(monthlyCount / expensesPerPage));
-        } 
-        else 
-        {
+        }
+        else {
             const totalPages = Math.ceil(filtered.length / expensesPerPage);
             setTotalPages(totalPages);
         }
-    
+
     }, [textSearch, expenses, currentPage]);
 
     const getPaginatedSummary = (summary) => {
@@ -201,6 +204,7 @@ const AllEntries = () => {
     };
 
     const renderExpensesTable = (expenses) => {
+
         const paginatedExpenses = filteredExpenses.slice((currentPage - 1) * expensesPerPage, currentPage * expensesPerPage);
 
         return (
@@ -216,10 +220,13 @@ const AllEntries = () => {
                     </tr>
                 </thead>
                 <tbody className='bg-white'>
-                    {paginatedExpenses.map((expense, index) => (
+                {paginatedExpenses.map((expense, index) => {
+                    const calculatedIndex = (currentPage - 1) * expensesPerPage + index;
+
+                    return (
                         <tr key={index}>
                             <td className='text-xl text-center shadow-md p-2'>
-                                {editingRow === index ? (
+                                {editingRow === calculatedIndex ? ( // Compare with overall index
                                     <input
                                         type="text"
                                         name="entry_name"
@@ -231,7 +238,7 @@ const AllEntries = () => {
                                 )}
                             </td>
                             <td className='text-xl text-center shadow-md p-2'>
-                                {editingRow === index ? (
+                                {editingRow === calculatedIndex ? ( // Compare with overall index
                                     <input
                                         type="number"
                                         name="entry_amount"
@@ -243,7 +250,7 @@ const AllEntries = () => {
                                 )}
                             </td>
                             <td className='text-xl text-center shadow-md p-2'>
-                                {editingRow === index ? (
+                                {editingRow === calculatedIndex ? ( // Compare with overall index
                                     <select name="entry_type" value={editedValues.entry_type} onChange={handleChange}>
                                         <option value="" disabled>Select type</option>
                                         <option value="Food">Food</option>
@@ -261,7 +268,7 @@ const AllEntries = () => {
                                 )}
                             </td>
                             <td className='text-xl text-center shadow-md p-2'>
-                                {editingRow === index ? (
+                                {editingRow === calculatedIndex ? ( // Compare with overall index
                                     <input
                                         type="text"
                                         name="date"
@@ -273,7 +280,7 @@ const AllEntries = () => {
                                 )}
                             </td>
                             <td className='text-xl text-center shadow-md p-2'>
-                                {editingRow === index ? (
+                                {editingRow === calculatedIndex ? ( // Compare with overall index
                                     <button className='text-white bg-blue-500 rounded-full p-1' onClick={() => handleEditSave(index)}>Save</button>
                                 ) : (
                                     <img src={editIcon} alt="edit" className='h-6 w-6 cursor-pointer' onClick={() => handleEditClick(index)} />
@@ -283,11 +290,12 @@ const AllEntries = () => {
                                 <img src={deleteIcon} alt="delete" className='h-6 w-6 cursor-pointer' />
                             </td>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-        );
-    };
+                    );
+                })}
+            </tbody>
+        </table>
+    );
+};
 
     const move = () => {
         navigate("/entry");
@@ -313,13 +321,13 @@ const AllEntries = () => {
                 ) : (
                     renderExpensesTable(filteredExpenses)
                 )}
-                <br/>
+                <br />
                 <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
                     handlePageChange={handlePageChange}
                 />
-                <br/>
+                <br />
                 <button onClick={move} className='p-3 bg-red-300 rounded-3xl font-semibold'>Add Expense</button>
             </div>
         </div>
