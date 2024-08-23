@@ -69,6 +69,47 @@ const AllEntries = () => {
         });
     };
 
+    
+    const handleDelete = async (index) => {
+        // Calculate the correct index based on currentPage and expensesPerPage
+        let calculatedIndex = (currentPage - 1) * expensesPerPage + index;
+        const expense = expenses[calculatedIndex];
+        console.log("To be deleted:", expense);
+    
+        try {
+            // Make the DELETE request to the server
+            const response = await fetch('https://money-matrix-backend.vercel.app/deleteExpense', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    expense_id: expense.expense_id,
+                    entry_id: expense.entry_id
+                })
+            });
+    
+            if (response.ok) { // Check if the response is successful
+                const res_data = await response.json();
+                console.log("Deleted response data:", res_data);
+    
+                // Assuming res_data.data contains the updated list of expenses
+                const updatedExpenses = res_data.data;
+                
+                // Update the state with the remaining expenses
+                setExpenses(updatedExpenses);
+                setFilteredExpenses(updatedExpenses);
+                window.location.reload();
+            } else {
+                console.error('Error deleting expense:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error deleting expense:', error);
+        }
+    };
+    
+
+
     const handleEditSave = async (index) => {
         let calculatedIndex=(currentPage-1)*expensesPerPage + index;
         const expenseToUpdate = { ...expenses[calculatedIndex], ...editedValues };
@@ -287,7 +328,7 @@ const AllEntries = () => {
                                 )}
                             </td>
                             <td className='text-xl text-center shadow-md p-2'>
-                                <img src={deleteIcon} alt="delete" className='h-6 w-6 cursor-pointer' />
+                                <img src={deleteIcon} alt="delete" className='h-6 w-6 cursor-pointer' onClick={()=>handleDelete(index)} />
                             </td>
                         </tr>
                     );
